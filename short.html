@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bert's Birthday Quordle!</title>
+    <style>
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #121213;
+            color: #ffffff;
+        }
+        .dark-mode .cell {
+            background-color: #3a3a3c;
+            color: #ffffff;
+            border-color: #565758;
+        }
+        .dark-mode .cell.filled {
+            border-color: #818384;
+        }
+        .dark-mode .key {
+            background-color: #818384;
+            color: #ffffff;
+        }
+        .dark-mode .instructions {
+            color: #a1a1a1;
+        }
+        
+        /* Dark mode toggle button */
+        .dark-mode-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #ff6b6b;
+            z-index: 10;
+        }
+        .dark-mode .dark-mode-toggle {
+            color: #ffffff;
+        }
+    </style>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #ff6b6b;
+            margin: 0;
+            font-size: clamp(20px, 6vw, 28px);
+            padding-top: 10px;
+        }
+
+        .instructions {
+            color: #666;
+            font-size: clamp(14px, 3.5vw, 18px);
+            margin: 5px 0 15px;
+            font-style: italic;
+        }
+        .game-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .board {
+            display: grid;
+            grid-template-rows: repeat(9, 50px);
+            grid-gap: 5px;
+            margin: 0 10px;
+        }
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, 50px);
+            grid-gap: 5px;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #d3d6da;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: white;
+        }
+        .cell.filled {
+            border-color: #878a8c;
+        }
+        .cell.correct {
+            background-color: #6aaa64;
+            color: white;
+            border-color: #6aaa64;
+        }
+        .cell.present {
+            background-color: #c9b458;
+            color: white;
+            border-color: #c9b458;
+        }
+        .cell.absent {
+            background-color: #787c7e;
+            color: white;
+            border-color: #787c7e;
+        }
+        /* Keyboard Styles */
+        .keyboard {
+            margin: 10px auto;
+            padding: 0 5px;
+            max-width: 500px; /* Limits keyboard width on larger screens */
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 6px;
+        }
+
+        .key {
+            height: 50px;
+            min-width: 30px; /* Fixed minimum for laptops */
+            max-width: 40px; /* Fixed maximum for laptops */
+            margin: 0 2px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            background-color: #d3d6da;
+            cursor: pointer;
+            flex-grow: 1; /* Allows growing on mobile */
+        }
+
+        .key.wide {
+            min-width: 50px; /* Fixed for laptops */
+            max-width: 60px; /* Fixed for laptops */
+            font-size: 14px;
+        }
+
+        /* Mobile-specific adjustments */
+        @media (max-width: 600px) {
+            .key {
+                min-width: 8vw; /* Flexible on small screens */
+                max-width: none; /* Remove fixed max on mobile */
+                height: 45px;
+                font-size: clamp(12px, 3.5vw, 16px);
+            }
+            .key.wide {
+                min-width: 12vw;
+                max-width: none;
+                font-size: clamp(10px, 3vw, 14px);
+            }
+        }
+        .key.correct {
+            background-color: #6aaa64;
+            color: white;
+        }
+        .key.present {
+            background-color: #c9b458;
+            color: white;
+        }
+        .key.absent {
+            background-color: #787c7e;
+            color: white;
+        }
+        #message {
+            height: 30px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin: 20px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .birthday-message {
+            font-size: 24px;
+            color: #ff6b6b;
+            margin-top: 30px;
+            animation: fadeIn 2s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Add this button right after the opening <body> tag -->
+    <button class="dark-mode-toggle" id="darkModeToggle">🌓</button>
+    
+    <!-- Rest of your existing HTML remains exactly the same -->
+    
+    <script>
+        // Add this dark mode toggle functionality
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const body = document.body;
+        
+        // Check for saved user preference
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            body.classList.add('dark-mode');
+        }
+        
+        // Toggle dark mode
+        darkModeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            
+            // Save user preference
+            if (body.classList.contains('dark-mode')) {
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                localStorage.setItem('darkMode', 'disabled');
+            }
+        });
+    </script>
+
+    <h1>Bert's Birthday Quordle! (Short Version)</h1>
+    <div class="instructions">What is the connection between these four words?</div>
+    <div id="birthdayMessage" class="hidden birthday-message">
+        Name of our kids (cats) 🤗
+    </div>
+    
+    <div class="game-container">
+        <div class="board" id="board1"></div>
+        <div class="board" id="board2"></div>
+        <div class="board" id="board3"></div>
+        <div class="board" id="board4"></div>
+    </div>
+    
+    <div class="keyboard">
+        <div class="keyboard-row">
+            <div class="key" data-key="Q">Q</div>
+            <div class="key" data-key="W">W</div>
+            <div class="key" data-key="E">E</div>
+            <div class="key" data-key="R">R</div>
+            <div class="key" data-key="T">T</div>
+            <div class="key" data-key="Y">Y</div>
+            <div class="key" data-key="U">U</div>
+            <div class="key" data-key="I">I</div>
+            <div class="key" data-key="O">O</div>
+            <div class="key" data-key="P">P</div>
+        </div>
+        <div class="keyboard-row">
+            <div class="key" data-key="A">A</div>
+            <div class="key" data-key="S">S</div>
+            <div class="key" data-key="D">D</div>
+            <div class="key" data-key="F">F</div>
+            <div class="key" data-key="G">G</div>
+            <div class="key" data-key="H">H</div>
+            <div class="key" data-key="J">J</div>
+            <div class="key" data-key="K">K</div>
+            <div class="key" data-key="L">L</div>
+        </div>
+        <div class="keyboard-row">
+            <div class="key wide" data-key="Enter">Enter</div>
+            <div class="key" data-key="Z">Z</div>
+            <div class="key" data-key="X">X</div>
+            <div class="key" data-key="C">C</div>
+            <div class="key" data-key="V">V</div>
+            <div class="key" data-key="B">B</div>
+            <div class="key" data-key="N">N</div>
+            <div class="key" data-key="M">M</div>
+            <div class="key wide" data-key="Backspace">⌫</div>
+        </div>
+    </div>
+
+    <script>
+        // Game configuration
+        const targets = ["gator", "ramen", "ladle", "micho"];
+        const maxAttempts = 10;
+        const wordLength = 5;
+        
+        // Game state
+        let currentBoards = [0, 1, 2, 3]; // Track which boards are active
+        let currentAttempts = [0, 0, 0, 0]; // Attempts per board
+        let currentRows = [0, 0, 0, 0]; // Current row per board
+        let boardStates = [[], [], [], []]; // Store guesses for each board
+        let completedBoards = [false, false, false, false];
+        
+        // Initialize boards
+        function initializeBoards() {
+            for (let boardIdx = 0; boardIdx < 4; boardIdx++) {
+                const board = document.getElementById(`board${boardIdx + 1}`);
+                board.innerHTML = '';
+                
+                for (let row = 0; row < maxAttempts; row++) {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'row';
+                    
+                    for (let col = 0; col < wordLength; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.id = `board${boardIdx + 1}-row${row}-col${col}`;
+                        rowDiv.appendChild(cell);
+                    }
+                    
+                    board.appendChild(rowDiv);
+                }
+            }
+        }
+        
+        // Handle keyboard input
+        function handleKeyPress(key) {
+            if (key === 'Enter') {
+                submitGuess();
+            } else if (key === 'Backspace') {
+                deleteLastLetter();
+            } else if (/^[A-Z]$/.test(key)) {
+                addLetter(key);
+            }
+        }
+        
+        // Add a letter to the current cells
+        function addLetter(letter) {
+            for (const boardIdx of currentBoards) {
+                if (completedBoards[boardIdx]) continue;
+                
+                const currentRow = currentRows[boardIdx];
+                const currentGuess = boardStates[boardIdx][currentRow] || '';
+                
+                if (currentGuess.length < wordLength) {
+                    boardStates[boardIdx][currentRow] = currentGuess + letter.toLowerCase();
+                    updateBoardCells();
+                }
+            }
+        }
+        
+        // Delete the last letter
+        function deleteLastLetter() {
+            for (const boardIdx of currentBoards) {
+                if (completedBoards[boardIdx]) continue;
+                
+                const currentRow = currentRows[boardIdx];
+                const currentGuess = boardStates[boardIdx][currentRow] || '';
+                
+                if (currentGuess.length > 0) {
+                    boardStates[boardIdx][currentRow] = currentGuess.slice(0, -1);
+                    updateBoardCells();
+                }
+            }
+        }
+        
+        // Submit the current guess
+        function submitGuess() {
+            let allValid = true;
+            
+            // Validate guesses for active boards
+            for (const boardIdx of currentBoards) {
+                if (completedBoards[boardIdx]) continue;
+                
+                const currentRow = currentRows[boardIdx];
+                const currentGuess = boardStates[boardIdx][currentRow] || '';
+                
+                if (currentGuess.length !== wordLength) {
+                    allValid = false;
+                    document.getElementById('message').textContent = `Guess must be ${wordLength} letters`;
+                    setTimeout(() => {
+                        document.getElementById('message').textContent = '';
+                    }, 2000);
+                    return;
+                }
+            }
+            
+            if (allValid) {
+                // Process each active board
+                for (const boardIdx of currentBoards) {
+                    if (completedBoards[boardIdx]) continue;
+                    
+                    const currentRow = currentRows[boardIdx];
+                    const currentGuess = boardStates[boardIdx][currentRow];
+                    const targetWord = targets[boardIdx];
+                    
+                    // Create arrays to track which letters we've already matched
+                    const targetLetters = targetWord.split('');
+                    const guessLetters = currentGuess.split('');
+                    const result = new Array(wordLength).fill('absent');
+                    
+                    // First pass: mark correct letters
+                    for (let i = 0; i < wordLength; i++) {
+                        if (guessLetters[i] === targetLetters[i]) {
+                            result[i] = 'correct';
+                            targetLetters[i] = null; // Mark as used
+                            guessLetters[i] = null;  // Mark as used
+                        }
+                    }
+                    
+                    // Second pass: mark present letters (correct letter but wrong position)
+                    for (let i = 0; i < wordLength; i++) {
+                        if (guessLetters[i] === null) continue; // Skip already matched letters
+                        
+                        const foundIndex = targetLetters.indexOf(guessLetters[i]);
+                        if (foundIndex !== -1) {
+                            result[i] = 'present';
+                            targetLetters[foundIndex] = null; // Mark as used
+                        }
+                    }
+                    
+                    // Update cells based on the result
+                    for (let i = 0; i < wordLength; i++) {
+                        const cell = document.getElementById(`board${boardIdx + 1}-row${currentRow}-col${i}`);
+                        cell.classList.add(result[i]);
+                        cell.classList.add('filled');
+                        
+                        // Update keyboard colors (don't override correct with present/absent)
+                        if (result[i] === 'correct') {
+                            updateKeyboardKey(currentGuess[i], 'correct');
+                        } else if (result[i] === 'present' && 
+                                 !document.querySelector(`.key[data-key="${currentGuess[i].toUpperCase()}"].correct`)) {
+                            updateKeyboardKey(currentGuess[i], 'present');
+                        } else if (result[i] === 'absent' && 
+                                   !document.querySelector(`.key[data-key="${currentGuess[i].toUpperCase()}"].correct`) && 
+                                   !document.querySelector(`.key[data-key="${currentGuess[i].toUpperCase()}"].present`)) {
+                            updateKeyboardKey(currentGuess[i], 'absent');
+                        }
+                    }
+                    
+                    // Check if board is completed
+                    if (currentGuess === targetWord) {
+                        completedBoards[boardIdx] = true;
+                        currentBoards = currentBoards.filter(b => b !== boardIdx);
+                    }
+                    
+                    currentRows[boardIdx]++;
+                    currentAttempts[boardIdx]++;
+                }
+                
+                // Check if all boards are completed
+                if (completedBoards.every(b => b)) {
+                    setTimeout(() => {
+                        document.getElementById('birthdayMessage').classList.remove('hidden');
+                    }, 1500);
+                }
+            }
+        }
+        
+        // Update all board cells based on current guesses
+        function updateBoardCells() {
+            for (let boardIdx = 0; boardIdx < 4; boardIdx++) {
+                if (completedBoards[boardIdx]) continue;
+                
+                const currentRow = currentRows[boardIdx];
+                const currentGuess = boardStates[boardIdx][currentRow] || '';
+                
+                // Update cells for current row
+                for (let i = 0; i < wordLength; i++) {
+                    const cell = document.getElementById(`board${boardIdx + 1}-row${currentRow}-col${i}`);
+                    cell.textContent = i < currentGuess.length ? currentGuess[i].toUpperCase() : '';
+                    cell.classList.toggle('filled', i < currentGuess.length);
+                }
+            }
+        }
+        
+        // Update keyboard key colors
+        function updateKeyboardKey(letter, state) {
+            const keys = document.querySelectorAll(`.key[data-key="${letter.toUpperCase()}"]`);
+            keys.forEach(key => {
+                // Don't override correct with present or absent
+                if (!key.classList.contains('correct')) {
+                    key.classList.remove('present', 'absent');
+                    key.classList.add(state);
+                }
+            });
+        }
+        
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                handleKeyPress('Enter');
+            } else if (e.key === 'Backspace') {
+                handleKeyPress('Backspace');
+            } else if (/^[a-zA-Z]$/.test(e.key)) {
+                handleKeyPress(e.key.toUpperCase());
+            }
+        });
+        
+        document.querySelectorAll('.key').forEach(key => {
+            key.addEventListener('click', () => {
+                handleKeyPress(key.getAttribute('data-key'));
+            });
+        });
+        
+        // Initialize the game
+        initializeBoards();
+    </script>
+</body>
+</html>
